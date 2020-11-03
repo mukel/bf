@@ -7,6 +7,7 @@ import com.oracle.truffle.api.TruffleLanguage;
 import com.oracle.truffle.api.TruffleLanguage.Registration;
 import com.oracle.truffle.api.nodes.RootNode;
 import org.graalvm.options.OptionCategory;
+import org.graalvm.options.OptionDescriptors;
 import org.graalvm.options.OptionKey;
 import org.graalvm.options.OptionStability;
 import org.graalvm.options.OptionType;
@@ -33,18 +34,24 @@ public final class BrainfckLanguage extends TruffleLanguage<TruffleLanguage.Env>
     }
 
     @Override
+    protected OptionDescriptors getOptionDescriptors() {
+        return new OptionsOptionDescriptors();
+    }
+
+    @Override
     protected CallTarget parse(final ParsingRequest request) throws Exception {
         byte[] code = BrainfckParser.parse(request.getSource().getCharacters());
         RootNode rootNode = new BytecodeNode(code, this, getCurrentContext(BrainfckLanguage.class));
         return Truffle.getRuntime().createCallTarget(rootNode);
     }
 
+    @Option.Group(BrainfckLanguage.ID)
     static final class Options {
         @Option(help = "Specify the behavior when encountering EOF while reading.", //
                 category = OptionCategory.USER, stability = OptionStability.STABLE) //
         public static final OptionKey<EOFMode> EOF = new OptionKey<>(EOFMode.UNCHANGED, EOFMode.OPTION_TYPE);
 
-        @Option(help = "Specify the number of cells available to every program.", //
+        @Option(help = "Specify the number of cells (memory slots) available.", //
                 category = OptionCategory.USER, stability = OptionStability.STABLE) //
         public static final OptionKey<Integer> NumberOfCells = new OptionKey<>(30000);
 
@@ -64,7 +71,7 @@ public final class BrainfckLanguage extends TruffleLanguage<TruffleLanguage.Env>
                         case "unchanged":
                             return EOFMode.UNCHANGED;
                         default:
-                            throw new IllegalArgumentException("--eof= can be '0', '-1' or 'unchanged'.");
+                            throw new IllegalArgumentException("--EOF= can be '0', '-1' or 'unchanged'.");
                     }
                 }
             });

@@ -29,7 +29,7 @@ import com.oracle.truffle.api.profiles.BranchProfile;
 import com.oracle.truffle.brainfck.BrainfckLanguage.Options;
 import com.oracle.truffle.object.DebugCounter;
 
-public class BytecodeNode extends RootNode {
+public final class BytecodeNode extends RootNode {
 
     private final TruffleLanguage.Env env;
 
@@ -62,13 +62,13 @@ public class BytecodeNode extends RootNode {
         long ticks = System.currentTimeMillis();
 
         int bci = 0;
-        final BytecodeStream stream = new BytecodeStream(code);
+        //final BytecodeStream stream = new BytecodeStream(code);
 
         int ptr = 0;
         final byte[] data = new byte[numberOfCells];
 
-        loop: while (bci < stream.endBCI()) {
-            int opcode = stream.currentBC(bci);
+        loop: while (bci < code.length) {
+            int opcode = code[bci]; // stream.currentBC(bci);
 
             HISTOGRAM[opcode].inc();
 
@@ -113,7 +113,7 @@ public class BytecodeNode extends RootNode {
                         int level = 0;
                         int target = bci;
                         while (true) {
-                            int oc = stream.currentBC(target);
+                            int oc = code[target]; // stream.currentBC(target);
                             if (oc == LOOP_BEGIN) {
                                 ++level;
                             } else if (oc == LOOP_END) {
@@ -132,7 +132,7 @@ public class BytecodeNode extends RootNode {
                     int level = 0;
                     int target = bci;
                     while (true) {
-                        int oc = stream.currentBC(target);
+                        int oc = code[target]; // stream.currentBC(target);
                         if (oc == LOOP_BEGIN) {
                             --level;
                         } else if (oc == LOOP_END) {

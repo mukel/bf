@@ -1,0 +1,5 @@
+# mx --dy /vm --components "Brainfck" --disable-polyglot graalvm-show
+
+DYNAMIC_IMPORTS=/vm
+COMPONENTS=Brainfck
+DISABLE_POLYGLOT=true

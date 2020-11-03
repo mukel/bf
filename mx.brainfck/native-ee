@@ -1,0 +1,8 @@
+# mx --dy /vm-enterprise,/substratevm-enterprise --components "Brainfck,SubstrateVM Enterprise" --native-images bf --disable-polyglot --disable-libpolyglot --force-bash-launchers=native-image graalvm-show
+
+DYNAMIC_IMPORTS=/vm-enterprise,/substratevm-enterprise
+COMPONENTS=Brainfck,SubstrateVM Enterprise
+NATIVE_IMAGES=bf
+DISABLE_POLYGLOT=true
+DISABLE_LIBPOLYGLOT=true
+FORCE_BASH_LAUNCHERS=native-image

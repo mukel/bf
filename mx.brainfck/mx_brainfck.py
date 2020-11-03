@@ -36,12 +36,12 @@ _suite = mx.suite('brainfck')
 
 
 def _brainfck_launcher_command(args):
-    """Brainfck launcher embedded in GraalVM + arguments"""
+    """Brainf*ck launcher embedded in GraalVM + arguments"""
     import mx_sdk_vm_impl
-    return [os.path.join(mx_sdk_vm_impl.graalvm_home(fatalIfMissing=True), 'bin', mx.cmd_suffix('brainfck'))] + args
+    return [os.path.join(mx_sdk_vm_impl.graalvm_home(fatalIfMissing=True), 'bin', mx.cmd_suffix('bf'))] + args
 
 def _brainfck_standalone_command(args):
-    """Brainfck standalone command from distribution jars + arguments"""
+    """Brainf*ck standalone command from distribution jars + arguments"""
     vm_args, args = mx.extract_VM_args(args, useDoubleDash=True, defaultAllVMArgs=False)
     return (
         vm_args
@@ -51,12 +51,12 @@ def _brainfck_standalone_command(args):
 
 
 def _run_brainfck_launcher(args=None, cwd=None):
-    """Run Brainfck launcher within a GraalVM"""
+    """Run Brainf*ck launcher within a GraalVM"""
     mx.run(_brainfck_launcher_command(args), cwd=cwd)
 
 
 def _run_brainfck_standalone(args=None, cwd=None):
-    """Run standalone Brainfck (not as part of GraalVM) from distribution jars"""
+    """Run standalone Brainf*ck (not as part of GraalVM) from distribution jars"""
     mx.run_java(_brainfck_standalone_command(args), cwd=cwd)
 
 
@@ -88,7 +88,7 @@ add_gate_runner(_suite, _brainfck_gate_runner)
 mx_sdk_vm.register_graalvm_component(mx_sdk_vm.GraalVmLanguage(
     suite=_suite,
     name='Brainfck',
-    short_name='brainfck',
+    short_name='bf',
     license_files=[],
     third_party_license_files=[],
     dependencies=['Truffle'],
@@ -96,11 +96,11 @@ mx_sdk_vm.register_graalvm_component(mx_sdk_vm.GraalVmLanguage(
     support_distributions=['brainfck:BRAINFCK_SUPPORT'],
     launcher_configs=[
         mx_sdk_vm.LanguageLauncherConfig(
-            destination='bin/<exe:brainfck>',
+            destination='bin/<exe:bf>',
             jar_distributions=['brainfck:BRAINFCK_LAUNCHER'],
             main_class='com.oracle.truffle.brainfck.launcher.BrainfckLauncher',
-            build_args=['--language:brainfck'],
-            language='brainfck',
+            build_args=['--language:bf'],
+            language='bf',
         )
     ],
 ))
@@ -108,15 +108,15 @@ mx_sdk_vm.register_graalvm_component(mx_sdk_vm.GraalVmLanguage(
 
 # Register new commands which can be used from the commandline with mx
 mx.update_commands(_suite, {
-    'brainfck': [_run_brainfck_launcher, '[args]'],
-    'brainfck-standalone': [_run_brainfck_standalone, '[args]'],    
+    'bf': [_run_brainfck_launcher, '[args]'],
+    'bf-standalone': [_run_brainfck_standalone, '[args]'],
     'verify-ci' : [verify_ci, '[options]'],
 })
 
 # Build configs
 # pylint: disable=bad-whitespace
-mx_sdk_vm.register_vm_config('brainfck-jvm',       ['java', 'nfi', 'sdk', 'tfl'                                        ], _suite, env_file='jvm')
-mx_sdk_vm.register_vm_config('brainfck-jvm-ce',    ['java', 'nfi', 'sdk', 'tfl', 'cmp'                                 ], _suite, env_file='jvm-ce')
-mx_sdk_vm.register_vm_config('brainfck-jvm-ee',    ['java', 'nfi', 'sdk', 'tfl', 'cmp', 'cmpee'                        ], _suite, env_file='jvm-ee')
-mx_sdk_vm.register_vm_config('brainfck-native-ce', ['java', 'nfi', 'sdk', 'tfl', 'cmp'         , 'svm'         , 'tflm'], _suite, env_file='native-ce')
-mx_sdk_vm.register_vm_config('brainfck-native-ee', ['java', 'nfi', 'sdk', 'tfl', 'cmp', 'cmpee', 'svm', 'svmee', 'tflm'], _suite, env_file='native-ee')
+mx_sdk_vm.register_vm_config('bf-jvm',       ['java', 'nfi', 'sdk', 'tfl'                                        ], _suite, env_file='jvm')
+mx_sdk_vm.register_vm_config('bf-jvm-ce',    ['java', 'nfi', 'sdk', 'tfl', 'cmp'                                 ], _suite, env_file='jvm-ce')
+mx_sdk_vm.register_vm_config('bf-jvm-ee',    ['java', 'nfi', 'sdk', 'tfl', 'cmp', 'cmpee'                        ], _suite, env_file='jvm-ee')
+mx_sdk_vm.register_vm_config('bf-native-ce', ['java', 'nfi', 'sdk', 'tfl', 'cmp'         , 'svm'         , 'tflm'], _suite, env_file='native-ce')
+mx_sdk_vm.register_vm_config('bf-native-ee', ['java', 'nfi', 'sdk', 'tfl', 'cmp', 'cmpee', 'svm', 'svmee', 'tflm'], _suite, env_file='native-ee')

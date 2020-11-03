@@ -146,8 +146,7 @@ suite = {
             "platformDependent": True,
             "layout": {
                 "./": [
-                    "file:mx.brainfck/native-image.properties",
-                    "file:mx.brainfck/reflectconfig.json",
+                    "file:mx.brainfck/native-image.properties",                    
                 ],
             },
         },

@@ -1,0 +1,5 @@
+# mx --dy /vm-enteprise,/graal-enterprise --components "Brainfck,GraalVM enterprise compiler" --disable-polyglot graalvm-show
+
+DYNAMIC_IMPORTS=/vm-enterprise,/graal-enterprise
+COMPONENTS=Brainfck,GraalVM enterprise compiler
+DISABLE_POLYGLOT=true

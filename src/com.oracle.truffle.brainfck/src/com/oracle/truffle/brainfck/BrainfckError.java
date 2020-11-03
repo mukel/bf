@@ -9,6 +9,7 @@ import java.util.Locale;
 /**
  * Indicates a condition in Brainfck related code that should never occur during normal operation.
  */
+@SuppressWarnings("serial")
 public final class BrainfckError extends Error {
 
     public static RuntimeException unimplemented() {

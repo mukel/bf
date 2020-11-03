@@ -11,8 +11,10 @@ import static com.oracle.truffle.brainfck.Bytecodes.WRITE_OUT;
 
 import java.io.IOException;
 
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleLanguage;
 import com.oracle.truffle.api.TruffleLogger;
 import com.oracle.truffle.api.frame.FrameDescriptor;
@@ -24,6 +26,7 @@ import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.ExplodeLoop.LoopExplosionKind;
 import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.profiles.BranchProfile;
+import com.oracle.truffle.brainfck.BrainfckLanguage.Options;
 import com.oracle.truffle.object.DebugCounter;
 
 public class BytecodeNode extends RootNode {
@@ -42,13 +45,15 @@ public class BytecodeNode extends RootNode {
     private final BranchProfile eofProfile;
 
     private final int numberOfCells;
+    private final Options.EOFMode eofMode;
 
     public BytecodeNode(byte[] code, BrainfckLanguage language, TruffleLanguage.Env env) {
         super(language, new FrameDescriptor());
         this.code = code;
         this.env = env;
         this.eofProfile = BranchProfile.create();
-        this.numberOfCells = env.getOptions().get(BrainfckLanguage.Options.NumberOfCells);
+        this.numberOfCells = env.getOptions().get(Options.NumberOfCells);
+        this.eofMode = env.getOptions().get(Options.EOF);
     }
 
     @ExplodeLoop(kind = LoopExplosionKind.MERGE_EXPLODE)
@@ -65,10 +70,10 @@ public class BytecodeNode extends RootNode {
         loop: while (bci < stream.endBCI()) {
             int opcode = stream.currentBC(bci);
 
-            // HISTOGRAM[opcode].inc();
+            HISTOGRAM[opcode].inc();
 
-            // CompilerAsserts.partialEvaluationConstant(bci);
-            // CompilerAsserts.partialEvaluationConstant(opcode);
+            CompilerAsserts.partialEvaluationConstant(bci);
+            CompilerAsserts.partialEvaluationConstant(opcode);
 
             // @formatter:off
             switch (opcode) {
@@ -79,7 +84,7 @@ public class BytecodeNode extends RootNode {
                 case READ_IN:
                     int value;
                     try {
-                       value = env.in().read();
+                       value = read();
                     } catch (IOException ioe) {
                         CompilerDirectives.transferToInterpreter();
                         throw BrainfckError.shouldNotReachHere(ioe);
@@ -88,7 +93,7 @@ public class BytecodeNode extends RootNode {
                         data[ptr] = (byte) value;
                     } else {
                         eofProfile.enter();
-                        switch (env.getOptions().get(BrainfckLanguage.Options.EOF)) {
+                        switch (eofMode) {
                             case ZERO: data[ptr] = 0; break;
                             case MINUS_ONE: data[ptr] = -1; break;
                             case UNCHANGED: /* ignore */ break;
@@ -97,7 +102,7 @@ public class BytecodeNode extends RootNode {
                     break;
                 case WRITE_OUT:
                     try {
-                        env.out().write(data[ptr]);
+                        write(data[ptr]);
                     } catch (IOException ioe) {
                         CompilerDirectives.transferToInterpreter();
                         throw BrainfckError.shouldNotReachHere(ioe);
@@ -148,9 +153,24 @@ public class BytecodeNode extends RootNode {
             bci++; // = stream.nextBCI(bci);
         }
 
-        TruffleLogger.getLogger(BrainfckLanguage.ID).finest(() -> "Elapsed time: " + (System.currentTimeMillis() - ticks) + "ms");
+        logElapsedTime(ticks);
 
         return Nothing.INSTANCE; // cannot return null
+    }
+
+    @TruffleBoundary
+    private static void logElapsedTime(long fromMillis) {
+        TruffleLogger.getLogger(BrainfckLanguage.ID).finest(() -> "Elapsed time: " + (System.currentTimeMillis() - fromMillis) + "ms");
+    }
+
+    @TruffleBoundary
+    private int read() throws IOException {
+        return env.in().read();
+    }
+
+    @TruffleBoundary
+    private void write(int b) throws IOException {
+        env.out().write(b);
     }
 
     @ExportLibrary(InteropLibrary.class)

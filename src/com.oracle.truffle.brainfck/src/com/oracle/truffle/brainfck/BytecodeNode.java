@@ -62,7 +62,7 @@ public final class BytecodeNode extends RootNode {
         long ticks = System.currentTimeMillis();
 
         int bci = 0;
-        //final BytecodeStream stream = new BytecodeStream(code);
+        // final BytecodeStream stream = new BytecodeStream(code);
 
         int ptr = 0;
         final byte[] data = new byte[numberOfCells];

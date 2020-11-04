@@ -116,4 +116,3 @@ public final class BrainfckError extends Error {
         return String.format(Locale.ENGLISH, msg, args);
     }
 }
-

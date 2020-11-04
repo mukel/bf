@@ -1,6 +1,5 @@
 package com.oracle.truffle.brainfck;
 
-
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 
 /**

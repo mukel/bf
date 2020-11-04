@@ -48,11 +48,11 @@ public final class BrainfckLanguage extends TruffleLanguage<TruffleLanguage.Env>
     @Option.Group(BrainfckLanguage.ID)
     static final class Options {
         @Option(help = "Specify the behavior when encountering EOF while reading.", //
-                category = OptionCategory.USER, stability = OptionStability.STABLE) //
+                        category = OptionCategory.USER, stability = OptionStability.STABLE) //
         public static final OptionKey<EOFMode> EOF = new OptionKey<>(EOFMode.UNCHANGED, EOFMode.OPTION_TYPE);
 
         @Option(help = "Specify the number of cells (memory slots) available.", //
-                category = OptionCategory.USER, stability = OptionStability.STABLE) //
+                        category = OptionCategory.USER, stability = OptionStability.STABLE) //
         public static final OptionKey<Integer> NumberOfCells = new OptionKey<>(30000);
 
         enum EOFMode {

@@ -40,7 +40,7 @@ public final class BrainfckLanguage extends TruffleLanguage<TruffleLanguage.Env>
 
     @Override
     protected CallTarget parse(final ParsingRequest request) throws Exception {
-        byte[] code = BrainfckParser.parse(request.getSource().getCharacters());
+        byte[] code = BrainfckParser.parse(request.getSource());
         RootNode rootNode = new BytecodeNode(code, this, getCurrentContext(BrainfckLanguage.class));
         return Truffle.getRuntime().createCallTarget(rootNode);
     }

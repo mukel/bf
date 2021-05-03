@@ -62,13 +62,12 @@ public final class BytecodeStream {
     }
 
     /**
-     * Reads the index of a local variable for one of the load or store instructions. The WIDE
-     * modifier is handled internally.
+     * Reads the offset argument for one of the update (pointer or data) instructions.
      *
-     * @return the index of the local variable
+     * @return the offset argument of the update (pointer or data) bytecode
      */
-    public int readLocalIndex(int curBCI) {
-        return Bytes.beU1(code, curBCI + 1);
+    public int readArgument(int curBCI) {
+        return Bytes.beS2(code, curBCI + 1);
     }
 
     /**

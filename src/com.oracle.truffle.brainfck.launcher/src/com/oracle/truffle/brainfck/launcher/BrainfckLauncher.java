@@ -12,7 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class BrainfckLauncher extends AbstractLanguageLauncher {
+public final class BrainfckLauncher extends AbstractLanguageLauncher {
 
     private VersionAction versionAction = VersionAction.None;
     String sourceFile = null;
@@ -89,6 +89,8 @@ public class BrainfckLauncher extends AbstractLanguageLauncher {
             } catch (IOException e) {
                 throw abort(e);
             }
+            context.eval(source);
+            context.eval(source);
             context.eval(source);
         }
     }

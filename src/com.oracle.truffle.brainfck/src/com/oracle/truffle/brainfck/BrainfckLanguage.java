@@ -40,16 +40,26 @@ public final class BrainfckLanguage extends TruffleLanguage<TruffleLanguage.Env>
 
     @Override
     protected CallTarget parse(final ParsingRequest request) throws Exception {
-        byte[] code = BrainfckParser.parse(request.getSource());
-        RootNode rootNode = new BytecodeNode(code, this, getCurrentContext(BrainfckLanguage.class));
+        Env context = getCurrentContext(BrainfckLanguage.class);
+        boolean optimizeBytecodes = context.getOptions().get(Options.Optimize);
+        byte[] code = BrainfckParser.parse(request.getSource(), optimizeBytecodes);
+        RootNode rootNode = new BytecodeNode(code, this, context);
         return Truffle.getRuntime().createCallTarget(rootNode);
     }
 
     @Option.Group(BrainfckLanguage.ID)
     static final class Options {
-        @Option(help = "Specify the behavior when encountering EOF while reading.", //
+        @Option(help = "Specify the behavior when encountering EOF while reading (0|-1|unchanged).", //
                         category = OptionCategory.USER, stability = OptionStability.STABLE) //
         public static final OptionKey<EOFMode> EOF = new OptionKey<>(EOFMode.UNCHANGED, EOFMode.OPTION_TYPE);
+
+        @Option(help = "Augments/optimize Brainf*ck bytecodes: fusing chains of <> and +- and adding additional high-level bytecodes.", //
+                category = OptionCategory.USER, stability = OptionStability.STABLE) //
+        public static final OptionKey<Boolean> Optimize = new OptionKey<>(true);
+
+        @Option(help = "Collects and prints the executed bytecodes.", //
+                category = OptionCategory.USER, stability = OptionStability.STABLE) //
+        public static final OptionKey<Boolean> Histogram = new OptionKey<>(false);
 
         @Option(help = "Specify the number of cells (memory slots) available.", //
                         category = OptionCategory.USER, stability = OptionStability.STABLE) //

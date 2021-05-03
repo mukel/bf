@@ -1,15 +1,26 @@
 package com.oracle.truffle.brainfck;
 
+import static com.oracle.truffle.api.HostCompilerDirectives.BytecodeInterpreterSwitch;
 import static com.oracle.truffle.brainfck.Bytecodes.DEC_DATA;
 import static com.oracle.truffle.brainfck.Bytecodes.DEC_PTR;
+import static com.oracle.truffle.brainfck.Bytecodes.END;
 import static com.oracle.truffle.brainfck.Bytecodes.INC_DATA;
 import static com.oracle.truffle.brainfck.Bytecodes.INC_PTR;
 import static com.oracle.truffle.brainfck.Bytecodes.LOOP_BEGIN;
 import static com.oracle.truffle.brainfck.Bytecodes.LOOP_END;
+import static com.oracle.truffle.brainfck.Bytecodes.LOOP_MOVE_DATA;
+import static com.oracle.truffle.brainfck.Bytecodes.LOOP_MOVE_PTR;
+import static com.oracle.truffle.brainfck.Bytecodes.NOP;
 import static com.oracle.truffle.brainfck.Bytecodes.READ_IN;
+import static com.oracle.truffle.brainfck.Bytecodes.UPDATE_DATA;
+import static com.oracle.truffle.brainfck.Bytecodes.UPDATE_PTR;
 import static com.oracle.truffle.brainfck.Bytecodes.WRITE_OUT;
+import static com.oracle.truffle.brainfck.Bytecodes.ZERO_DATA;
+import static com.oracle.truffle.brainfck.Bytecodes.lengthOf;
+import static com.oracle.truffle.brainfck.Bytecodes.nameOf;
 
 import java.io.IOException;
+import java.util.Stack;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
@@ -31,136 +42,183 @@ import com.oracle.truffle.object.DebugCounter;
 
 public final class BytecodeNode extends RootNode {
 
-    private final TruffleLanguage.Env env;
-
+    private static final FrameDescriptor EMPTY_FRAME_DESCRIPTOR;
     private static final DebugCounter[] HISTOGRAM;
+
     static {
-        HISTOGRAM = new DebugCounter[Bytecodes.END];
+        EMPTY_FRAME_DESCRIPTOR = new FrameDescriptor();
+        HISTOGRAM = new DebugCounter[END + 1];
         for (int i = 0; i < HISTOGRAM.length; ++i) {
-            HISTOGRAM[i] = DebugCounter.create(Bytecodes.nameOf(i));
+            HISTOGRAM[i] = DebugCounter.create(nameOf(i));
         }
     }
 
+    private final TruffleLanguage.Env env;
     @CompilationFinal(dimensions = 1) private final byte[] code;
-    private final BranchProfile eofProfile;
+    @CompilationFinal(dimensions = 1) private final int[] jumpTable;
 
+    private final BranchProfile eofProfile;
     private final int numberOfCells;
     private final Options.EOFMode eofMode;
+    private final boolean bytecodeHistogram;
 
     public BytecodeNode(byte[] code, BrainfckLanguage language, TruffleLanguage.Env env) {
-        super(language, new FrameDescriptor());
+        super(language, EMPTY_FRAME_DESCRIPTOR);
+        CompilerAsserts.neverPartOfCompilation();
         this.code = code;
         this.env = env;
         this.eofProfile = BranchProfile.create();
         this.numberOfCells = env.getOptions().get(Options.NumberOfCells);
         this.eofMode = env.getOptions().get(Options.EOF);
+        this.bytecodeHistogram = env.getOptions().get(Options.Histogram);
+        this.jumpTable = computeJumpTable(code);
     }
 
-    @ExplodeLoop(kind = LoopExplosionKind.MERGE_EXPLODE)
+    private static int[] computeJumpTable(byte[] code) {
+        int[] jumpTable = new int[code.length];
+
+        Stack<Integer> openBrackets = new Stack<>();
+        for (int bci = 0; bci < code.length; /* nop */) {
+            int opcode = code[bci];
+            if (opcode == LOOP_BEGIN) {
+                openBrackets.push(bci);
+            } else if (opcode == LOOP_END) {
+                int begin = openBrackets.pop();
+                jumpTable[bci] = begin + 1;
+                jumpTable[begin] = bci + 1;
+            }
+            bci += lengthOf(opcode);
+        }
+
+        assert openBrackets.empty();
+        return jumpTable;
+    }
+
+    @TruffleBoundary
+    private static void logElapsedTime(long fromNanos) {
+        long elapsedNanos = System.nanoTime() - fromNanos;
+        TruffleLogger.getLogger(BrainfckLanguage.ID).finest("Elapsed time: " + elapsedNanos / 1000_000 + "ms");
+    }
+
     @Override
     public Object execute(VirtualFrame frame) {
-        long ticks = System.currentTimeMillis();
+        long startNanos = System.nanoTime();
+        executeBody(0, 0, new byte[numberOfCells]);
+        logElapsedTime(startNanos);
+        return Nothing.INSTANCE;
+    }
 
-        int bci = 0;
-        // final BytecodeStream stream = new BytecodeStream(code);
+    @BytecodeInterpreterSwitch
+    @ExplodeLoop(kind = LoopExplosionKind.MERGE_EXPLODE)
+    private void executeBody(int bci0, int ptr0, byte[] data0) {
 
-        int ptr = 0;
-        final byte[] data = new byte[numberOfCells];
+        CompilerAsserts.partialEvaluationConstant(bci0);
+        CompilerAsserts.partialEvaluationConstant(ptr0);
+
+        int bci = bci0;
+        final int[] ptr = new int[]{ptr0};
+        final byte[] data = data0;
 
         loop: while (bci < code.length) {
             int opcode = code[bci]; // stream.currentBC(bci);
 
-            HISTOGRAM[opcode].inc();
-
             CompilerAsserts.partialEvaluationConstant(bci);
             CompilerAsserts.partialEvaluationConstant(opcode);
+            CompilerDirectives.ensureVirtualized(ptr);
+
+            if (bytecodeHistogram) {
+                HISTOGRAM[opcode].inc();
+            }
 
             // @formatter:off
             switch (opcode) {
-                case INC_PTR: ++ptr; break;
-                case DEC_PTR: --ptr; break;
-                case INC_DATA: ++data[ptr]; break;
-                case DEC_DATA: --data[ptr]; break;
+                case NOP: /* ignore */ break;
+                case INC_PTR: ++ptr[0]; break;
+                case DEC_PTR: --ptr[0]; break;
+                case INC_DATA: ++data[ptr[0]]; break;
+                case DEC_DATA: --data[ptr[0]]; break;
+
+                case UPDATE_PTR: {
+                    ptr[0] += (code[bci + 2] << 8) | (code[bci + 1] & 0xFF);
+                    bci += 3; // = stream.nextBCI(bci);
+                    continue loop;
+                }
+                case UPDATE_DATA: {
+                    data[ptr[0]] += (code[bci + 2] << 8) | (code[bci + 1] & 0xFF);
+                    bci += 3; // = stream.nextBCI(bci);
+                    continue loop;
+                }
+
+                case ZERO_DATA:  data[ptr[0]] = 0; break;
+
                 case READ_IN:
                     int value;
                     try {
-                       value = read();
+                        value = read();
                     } catch (IOException ioe) {
                         CompilerDirectives.transferToInterpreter();
                         throw BrainfckError.shouldNotReachHere(ioe);
                     }
                     if (value != -1) {
-                        data[ptr] = (byte) value;
+                        data[ptr[0]] = (byte) value;
                     } else {
                         eofProfile.enter();
                         switch (eofMode) {
-                            case ZERO: data[ptr] = 0; break;
-                            case MINUS_ONE: data[ptr] = -1; break;
+                            case ZERO: data[ptr[0]] = 0; break;
+                            case MINUS_ONE: data[ptr[0]] = -1; break;
                             case UNCHANGED: /* ignore */ break;
                         }
                     }
                     break;
                 case WRITE_OUT:
                     try {
-                        write(data[ptr]);
+                        write(data[ptr[0]]);
                     } catch (IOException ioe) {
                         CompilerDirectives.transferToInterpreter();
                         throw BrainfckError.shouldNotReachHere(ioe);
                     }
                     break;
                 case LOOP_BEGIN:
-                    if (data[ptr] == 0) { // GOTO (AFTER) LOOP_END
-                        int level = 0;
-                        int target = bci;
-                        while (true) {
-                            int oc = code[target]; // stream.currentBC(target);
-                            if (oc == LOOP_BEGIN) {
-                                ++level;
-                            } else if (oc == LOOP_END) {
-                                --level;
-                            }
-                            target++; // = stream.nextBCI(target);
-                            if (level == 0) {
-                                break ;
-                            }
-                        }
-                        bci = target;
+                    if (data[ptr[0]] == 0) { // GOTO (AFTER) LOOP_END
+                        bci = jumpTable[bci];
                         continue loop;
                     }
                     break;
-                case LOOP_END: // GOTO LOOP_BEGIN
-                    int level = 0;
-                    int target = bci;
-                    while (true) {
-                        int oc = code[target]; // stream.currentBC(target);
-                        if (oc == LOOP_BEGIN) {
-                            --level;
-                        } else if (oc == LOOP_END) {
-                            ++level;
-                        }
-                        if (level == 0) {
-                            break ;
-                        }
-                        --target; // assumes all bytecodes are 1-byte
+                case LOOP_END:
+                    if (data[ptr[0]] != 0) { // GOTO (AFTER) LOOP_BEGIN
+                        bci = jumpTable[bci];
+                        continue loop;
                     }
-                    bci = target;
+                    break;
+
+                case LOOP_MOVE_PTR: {
+                    if (data[ptr[0]] != 0) {
+                        int ptrOffset = (code[bci + 2] << 8) | (code[bci + 1] & 0xFF);
+                        ptr[0] += ptrOffset;
+                        while (data[ptr[0]] != 0) {
+                            ptr[0] += ptrOffset;
+                        }
+                    }
+                    bci += 3;
                     continue loop;
+                }
+                case LOOP_MOVE_DATA: {
+                    if (data[ptr[0]] != 0) {
+                        int ptrOffset = ((code[bci + 2] << 8) | (code[bci + 1] & 0xFF));
+                        int dataMultiplier = ((code[bci + 4] << 8) | (code[bci + 3] & 0xFF));
+                        data[ptr[0] + ptrOffset] += dataMultiplier * data[ptr[0]];
+                        data[ptr[0]] = 0;
+                    }
+                    bci += 5;
+                    continue loop;
+                }
                 default:
                     CompilerDirectives.transferToInterpreter();
                     throw BrainfckError.shouldNotReachHere("unknown bytecode: " + opcode);
             }
             // @formatter:on
-            bci++; // = stream.nextBCI(bci);
+            ++bci; // = stream.nextBCI(bci);
         }
-
-        logElapsedTime(ticks);
-
-        return Nothing.INSTANCE; // cannot return null
-    }
-
-    @TruffleBoundary
-    private static void logElapsedTime(long fromMillis) {
-        TruffleLogger.getLogger(BrainfckLanguage.ID).finest(() -> "Elapsed time: " + (System.currentTimeMillis() - fromMillis) + "ms");
     }
 
     @TruffleBoundary

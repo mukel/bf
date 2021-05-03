@@ -2,6 +2,8 @@ package com.oracle.truffle.brainfck;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.HostCompilerDirectives;
+import com.oracle.truffle.api.HostCompilerDirectives.BytecodeInterpreterSwitchBoundary;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -9,34 +11,39 @@ import java.util.Locale;
 /**
  * Indicates a condition in Brainfck related code that should never occur during normal operation.
  */
-@SuppressWarnings("serial")
 public final class BrainfckError extends Error {
 
+    @TruffleBoundary
     public static RuntimeException unimplemented() {
         CompilerDirectives.transferToInterpreter();
         throw new BrainfckError("unimplemented");
     }
 
+    @TruffleBoundary
     public static RuntimeException unimplemented(Object... msg) {
         CompilerDirectives.transferToInterpreter();
         throw new BrainfckError("unimplemented: %s", cat(msg));
     }
 
+    @TruffleBoundary
     public static RuntimeException shouldNotReachHere() {
         CompilerDirectives.transferToInterpreter();
         throw new BrainfckError("should not reach here");
     }
 
+    @TruffleBoundary
     public static RuntimeException shouldNotReachHere(Object... msg) {
         CompilerDirectives.transferToInterpreter();
         throw new BrainfckError("should not reach here: %s", cat(msg));
     }
 
+    @TruffleBoundary
     public static RuntimeException shouldNotReachHere(Throwable cause) {
         CompilerDirectives.transferToInterpreter();
         throw new BrainfckError(cause);
     }
 
+    @TruffleBoundary
     public static RuntimeException unexpected(String msg, Throwable cause) {
         CompilerDirectives.transferToInterpreter();
         throw new BrainfckError(msg, cause);

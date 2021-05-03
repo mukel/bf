@@ -11,17 +11,24 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 public final class Bytecodes {
 
     // @formatter:off
-    public static final int NOP        = 0;
-    public static final int INC_PTR    = 1;
-    public static final int DEC_PTR    = 2;
-    public static final int INC_DATA   = 3;
-    public static final int DEC_DATA   = 4;
-    public static final int WRITE_OUT  = 5;
-    public static final int READ_IN    = 6;
-    public static final int LOOP_BEGIN = 7;
-    public static final int LOOP_END   = 8;
+    public static final int NOP         = 0;
+    public static final int INC_PTR     = 1;
+    public static final int DEC_PTR     = 2;
+    public static final int INC_DATA    = 3;
+    public static final int DEC_DATA    = 4;
+    public static final int WRITE_OUT   = 5;
+    public static final int READ_IN     = 6;
+    public static final int LOOP_BEGIN  = 7;
+    public static final int LOOP_END    = 8;
 
-    public static final int END        = 9;
+    public static final int UPDATE_PTR  = 9;
+    public static final int UPDATE_DATA = 10;
+    public static final int ZERO_DATA   = 11;
+
+    public static final int LOOP_MOVE_PTR  = 12;
+    public static final int LOOP_MOVE_DATA = 13;
+
+    public static final int END         = 14;
     // @formatter:on
 
     /**
@@ -58,7 +65,7 @@ public final class Bytecodes {
 
     // @formatter:off
     static {
-        def(NOP, "0", "b", 0);
+        def(NOP, "nop", "b", 0);
         def(INC_PTR, ">", "b", 0);
         def(DEC_PTR, "<", "b", 0);
         def(INC_DATA, "+", "b", 0);
@@ -67,6 +74,14 @@ public final class Bytecodes {
         def(READ_IN, ",", "b", 0);
         def(LOOP_BEGIN, "[", "b", FALL_THROUGH);
         def(LOOP_END, "]", "b", STOP);
+
+        // Extra bytecodes produced by the optimization pass (--bf.Optimize).
+        def(UPDATE_PTR, "p", "bjj", 0);
+        def(UPDATE_DATA, "d", "bjj", 0);
+        def(ZERO_DATA, "0", "b", 0);
+        def(LOOP_MOVE_PTR, "P", "bjj", 0);
+        def(LOOP_MOVE_DATA, "D", "bjjii", 0);
+
         def(END, "end", "b", 0);
     }
     // @formatter:on

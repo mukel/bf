@@ -1,61 +1,39 @@
 package com.oracle.truffle.brainfck;
 
-import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.HostCompilerDirectives;
-import com.oracle.truffle.api.HostCompilerDirectives.BytecodeInterpreterSwitchBoundary;
-
 import java.util.ArrayList;
 import java.util.Locale;
+
+import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.HostCompilerDirectives.BytecodeInterpreterSwitchBoundary;
 
 /**
  * Indicates a condition in Brainfck related code that should never occur during normal operation.
  */
 public final class BrainfckError extends Error {
 
-    @TruffleBoundary
+    @BytecodeInterpreterSwitchBoundary
     public static RuntimeException unimplemented() {
-        CompilerDirectives.transferToInterpreter();
+        CompilerAsserts.neverPartOfCompilation();
         throw new BrainfckError("unimplemented");
     }
 
-    @TruffleBoundary
-    public static RuntimeException unimplemented(Object... msg) {
-        CompilerDirectives.transferToInterpreter();
-        throw new BrainfckError("unimplemented: %s", cat(msg));
-    }
-
-    @TruffleBoundary
+    @BytecodeInterpreterSwitchBoundary
     public static RuntimeException shouldNotReachHere() {
-        CompilerDirectives.transferToInterpreter();
+        CompilerAsserts.neverPartOfCompilation();
         throw new BrainfckError("should not reach here");
     }
 
-    @TruffleBoundary
-    public static RuntimeException shouldNotReachHere(Object... msg) {
-        CompilerDirectives.transferToInterpreter();
-        throw new BrainfckError("should not reach here: %s", cat(msg));
+    @BytecodeInterpreterSwitchBoundary
+    public static RuntimeException shouldNotReachHere(String message) {
+        CompilerAsserts.neverPartOfCompilation();
+        throw new BrainfckError("should not reach here: %s", message);
     }
 
-    @TruffleBoundary
+    @BytecodeInterpreterSwitchBoundary
     public static RuntimeException shouldNotReachHere(Throwable cause) {
-        CompilerDirectives.transferToInterpreter();
+        CompilerAsserts.neverPartOfCompilation();
         throw new BrainfckError(cause);
-    }
-
-    @TruffleBoundary
-    public static RuntimeException unexpected(String msg, Throwable cause) {
-        CompilerDirectives.transferToInterpreter();
-        throw new BrainfckError(msg, cause);
-    }
-
-    @TruffleBoundary
-    public static String cat(Object... strs) {
-        StringBuilder res = new StringBuilder();
-        for (Object str : strs) {
-            res.append(str);
-        }
-        return res.toString();
     }
 
     /**
@@ -65,14 +43,15 @@ public final class BrainfckError extends Error {
      * if possible.
      *
      * @param condition the condition to check
-     * @param msg the message that will be associated with the error, in
+     * @param message the message that will be associated with the error, in
      *            {@link String#format(String, Object...)} syntax
      * @param args arguments to the format string
      */
-    public static void guarantee(boolean condition, String msg, Object... args) {
+    @BytecodeInterpreterSwitchBoundary
+    public static void guarantee(boolean condition, String message, Object... args) {
         if (!condition) {
-            CompilerDirectives.transferToInterpreter();
-            throw new BrainfckError("failed guarantee: " + msg, args);
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            throw new BrainfckError("failed guarantee: " + message, args);
         }
     }
 
@@ -81,7 +60,7 @@ public final class BrainfckError extends Error {
      *
      * @param msg the message that will be associated with the error
      */
-    public BrainfckError(String msg) {
+    private BrainfckError(String msg) {
         super(msg);
     }
 
@@ -94,7 +73,7 @@ public final class BrainfckError extends Error {
      * @param args parameters to String.format - parameters that implement {@link Iterable} will be
      *            expanded into a [x, x, ...] representation.
      */
-    public BrainfckError(String msg, Object... args) {
+    private BrainfckError(String msg, Object... args) {
         super(format(msg, args));
     }
 

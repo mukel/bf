@@ -18,6 +18,7 @@ public final class BrainfckFileDetector implements TruffleFile.FileTypeDetector 
 
     @Override
     public Charset findEncoding(TruffleFile file) throws IOException {
+        file.isReadable();
         return null;
     }
 }

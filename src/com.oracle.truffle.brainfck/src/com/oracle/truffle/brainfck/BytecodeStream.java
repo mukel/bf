@@ -16,7 +16,7 @@ public final class BytecodeStream {
      *
      * @param code the array of bytes that contains the bytecode
      */
-    public BytecodeStream(final byte[] code) {
+    public BytecodeStream(byte[] code) {
         assert code != null;
         this.code = code;
     }
@@ -67,7 +67,7 @@ public final class BytecodeStream {
      * @return the offset argument of the update (pointer or data) bytecode
      */
     public int readArgument(int curBCI) {
-        return Bytes.beS2(code, curBCI + 1);
+        return Bytes.beS1(code, curBCI + 1);
     }
 
     /**

@@ -17,61 +17,12 @@ import static com.oracle.truffle.brainfck.Bytecodes.ZERO_DATA;
 
 import java.io.ByteArrayOutputStream;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleLogger;
-import com.oracle.truffle.api.exception.AbstractTruffleException;
-import com.oracle.truffle.api.interop.ExceptionType;
-import com.oracle.truffle.api.interop.InteropLibrary;
-import com.oracle.truffle.api.interop.UnsupportedMessageException;
-import com.oracle.truffle.api.library.ExportLibrary;
-import com.oracle.truffle.api.library.ExportMessage;
 import com.oracle.truffle.api.source.Source;
-import com.oracle.truffle.api.source.SourceSection;
 
 public final class BrainfckParser {
 
-    @ExportLibrary(InteropLibrary.class)
-    public static class BrainfckParseError extends AbstractTruffleException {
-
-        private final Source source;
-        private final int offset;
-
-        public BrainfckParseError(Source source, int offset, String message) {
-            super(niceMessage(source, offset, message));
-            this.source = source;
-            this.offset = offset;
-        }
-
-        private static String niceMessage(Source source, int offset, String message) {
-            if (source == null) {
-                return message;
-            }
-            return String.format("%s (at line %d, column %d): %s", source.getName(), source.getLineNumber(offset), source.getColumnNumber(offset), message);
-        }
-
-        @ExportMessage
-        ExceptionType getExceptionType() {
-            return ExceptionType.PARSE_ERROR;
-        }
-
-        @ExportMessage
-        boolean hasSourceLocation() {
-            return source != null;
-        }
-
-        @ExportMessage(name = "getSourceLocation")
-        @TruffleBoundary
-        SourceSection getSourceSection() throws UnsupportedMessageException {
-            if (source == null) {
-                throw UnsupportedMessageException.create();
-            }
-            return source.createSection(source.getLineNumber(offset), source.getColumnNumber(offset), 1);
-        }
-    }
-
     public static byte[] parse(Source source, boolean optimize) {
-        assert source.hasCharacters();
-
         CharSequence chars = source.getCharacters();
         ByteArrayOutputStream baos = new ByteArrayOutputStream(chars.length());
 
@@ -107,12 +58,12 @@ public final class BrainfckParser {
         }
 
         return optimize
-                ? rleOptimize(baos.toByteArray())
-                : baos.toByteArray();
+                        ? rleOptimize(baos.toByteArray())
+                        : baos.toByteArray();
     }
 
-    private static boolean fitsInShort(int value) {
-        return Short.MIN_VALUE <= value && value <= Short.MAX_VALUE;
+    private static boolean fitsInByte(int value) {
+        return Byte.MIN_VALUE <= value && value <= Byte.MAX_VALUE;
     }
 
     static byte[] rleOptimize(byte[] code) {
@@ -136,11 +87,11 @@ public final class BrainfckParser {
                         }
                         ++i;
                     }
-                    if (delta != 0) {
+                    while (delta != 0) {
+                        int rest = delta > 0 ? Math.min(delta, Byte.MAX_VALUE) : Math.max(delta, Byte.MIN_VALUE);
                         baos.write(UPDATE_PTR);
-                        BrainfckError.guarantee(fitsInShort(delta), "(Pointer) update offset must fit in a short: " + delta);
-                        baos.write(delta & 0xff);
-                        baos.write(delta >> 8);
+                        baos.write(rest);
+                        delta -= rest;
                     }
                     --i;
                     break;
@@ -158,11 +109,11 @@ public final class BrainfckParser {
                         }
                         ++i;
                     }
-                    if (delta != 0) {
+                    while (delta != 0) {
+                        int rest = delta > 0 ? Math.min(delta, Byte.MAX_VALUE) : Math.max(delta, Byte.MIN_VALUE);
                         baos.write(UPDATE_DATA);
-                        BrainfckError.guarantee(fitsInShort(delta), "(Data) update offset must fit in a short: " + delta);
-                        baos.write(delta & 0xFF);
-                        baos.write(delta >> 8);
+                        baos.write(rest);
+                        delta -= rest;
                     }
                     --i;
                     break;
@@ -184,11 +135,9 @@ public final class BrainfckParser {
                             }
                             ++j;
                         }
-                        if (j < code.length && code[j] == LOOP_END && delta != 0) {
+                        if (j < code.length && code[j] == LOOP_END && delta != 0 && fitsInByte(delta)) {
                             baos.write(LOOP_MOVE_PTR);
-                            BrainfckError.guarantee(fitsInShort(delta), "(Pointer) update offset must fit in a short: " + delta);
-                            baos.write(delta & 0xFF);
-                            baos.write(delta >> 8);
+                            baos.write(delta);
                             i = j;
                             break;
                         }
@@ -235,14 +184,11 @@ public final class BrainfckParser {
                             ++j;
                         }
 
-                        if (j < code.length && code[j] == LOOP_END) {
+                        if (j < code.length && code[j] == LOOP_END && fitsInByte(deltaPtrL) && fitsInByte(deltaDataR)) {
                             if (deltaDataL == -1 && deltaPtrL != 0 && deltaPtrL == -deltaPtrR) {
                                 baos.write(LOOP_MOVE_DATA);
-                                BrainfckError.guarantee(fitsInShort(delta), "(Pointer) update offset must fit in a short: " + delta);
-                                baos.write(deltaPtrL & 0xFF);
-                                baos.write(deltaPtrL >> 8);
-                                baos.write(deltaDataR & 0xFF);
-                                baos.write(deltaDataR >> 8);
+                                baos.write(deltaPtrL);
+                                baos.write(deltaDataR);
                                 i = j;
                                 break;
                             }

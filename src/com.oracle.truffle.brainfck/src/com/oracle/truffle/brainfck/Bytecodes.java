@@ -11,6 +11,7 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 public final class Bytecodes {
 
     // @formatter:off
+    // Standard operations
     public static final int NOP         = 0;
     public static final int INC_PTR     = 1;
     public static final int DEC_PTR     = 2;
@@ -21,6 +22,7 @@ public final class Bytecodes {
     public static final int LOOP_BEGIN  = 7;
     public static final int LOOP_END    = 8;
 
+    // Additional operations
     public static final int UPDATE_PTR  = 9;
     public static final int UPDATE_DATA = 10;
     public static final int ZERO_DATA   = 11;
@@ -76,11 +78,11 @@ public final class Bytecodes {
         def(LOOP_END, "]", "b", STOP);
 
         // Extra bytecodes produced by the optimization pass (--bf.Optimize).
-        def(UPDATE_PTR, "p", "bjj", 0);
-        def(UPDATE_DATA, "d", "bjj", 0);
+        def(UPDATE_PTR, "p", "bj", 0);
+        def(UPDATE_DATA, "d", "bj", 0);
         def(ZERO_DATA, "0", "b", 0);
-        def(LOOP_MOVE_PTR, "P", "bjj", 0);
-        def(LOOP_MOVE_DATA, "D", "bjjii", 0);
+        def(LOOP_MOVE_PTR, "P", "bj", 0);
+        def(LOOP_MOVE_DATA, "D", "bji", 0);
 
         def(END, "end", "b", 0);
     }

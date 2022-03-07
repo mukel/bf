@@ -21,7 +21,7 @@
 # questions.
 #
 suite = {
-    "mxversion": "5.292.6",
+    "mxversion": "5.320.2",
     "name": "brainfck",
 
     # ------------- licenses
@@ -60,7 +60,7 @@ suite = {
                 "truffle:TRUFFLE_API",
             ],
             "annotationProcessors": ["truffle:TRUFFLE_DSL_PROCESSOR"],
-            "javaCompliance": "1.8+",
+            "javaCompliance": "11+",
             "checkstyle": "com.oracle.truffle.brainfck",
             "checkstyleVersion": "8.8",            
         },
@@ -73,7 +73,7 @@ suite = {
                 "sdk:GRAAL_SDK",
                 "sdk:LAUNCHER_COMMON",
             ],
-            "javaCompliance": "1.8+",
+            "javaCompliance": "11+",
             "checkstyle": "com.oracle.truffle.brainfck",
         },
 
@@ -86,7 +86,7 @@ suite = {
                 "mx:JUNIT",
                 "mx:ASM_COMMONS_7.1",
             ],
-            "javaCompliance": "1.8+",
+            "javaCompliance": "11+",
             "annotationProcessors": ["truffle:TRUFFLE_DSL_PROCESSOR"],
             "checkstyle": "com.oracle.truffle.brainfck",
         },

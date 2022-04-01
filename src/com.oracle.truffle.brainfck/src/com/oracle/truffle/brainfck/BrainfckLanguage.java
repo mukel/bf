@@ -1,5 +1,6 @@
 package com.oracle.truffle.brainfck;
 
+import com.oracle.truffle.brainfck.opt.Optimizer;
 import org.graalvm.options.OptionCategory;
 import org.graalvm.options.OptionDescriptors;
 import org.graalvm.options.OptionKey;
@@ -21,7 +22,7 @@ import com.oracle.truffle.api.nodes.RootNode;
                 contextPolicy = TruffleLanguage.ContextPolicy.SHARED) //
 public final class BrainfckLanguage extends TruffleLanguage<TruffleLanguage.Env> {
 
-    static final String ID = "bf";
+    public static final String ID = "bf";
     static final String NAME = "Brainf*ck";
     static final String VERSION = "0.1";
     public static final String MIME_TYPE = "application/x-bf";
@@ -42,7 +43,7 @@ public final class BrainfckLanguage extends TruffleLanguage<TruffleLanguage.Env>
     protected CallTarget parse(final ParsingRequest request) throws Exception {
         Env context = CONTEXT_REFERENCE.get(null);
         boolean optimizeBytecodes = context.getOptions().get(Options.Optimize);
-        byte[] code = BrainfckParser.parse(request.getSource(), optimizeBytecodes);
+        byte[] code = Optimizer.parse(request.getSource()); //BrainfckParser.parse(request.getSource(), optimizeBytecodes);
         RootNode rootNode = new BytecodeNode(code, this, context);
         return rootNode.getCallTarget();
     }

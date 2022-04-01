@@ -12,44 +12,53 @@ public final class Bytecodes {
 
     // @formatter:off
     // Standard operations
-    public static final int NOP         = 0;
-    public static final int INC_PTR     = 1;
-    public static final int DEC_PTR     = 2;
-    public static final int INC_DATA    = 3;
-    public static final int DEC_DATA    = 4;
-    public static final int WRITE_OUT   = 5;
-    public static final int READ_IN     = 6;
-    public static final int LOOP_BEGIN  = 7;
-    public static final int LOOP_END    = 8;
+    //public static final int NOP         = 0;
+    //public static final int INC_PTR     = 1;
+    //public static final int DEC_PTR     = 2;
+    //public static final int INC_DATA    = 3;
+    //public static final int DEC_DATA    = 4;
+    //public static final int WRITE_OUT   = 5;
+    //public static final int READ_IN     = 6;
+    public static final int LOOP_BEGIN  = 0;
+    public static final int LOOP_END    = 1;
 
     // Additional operations
-    public static final int UPDATE_PTR  = 9;
-    public static final int UPDATE_DATA = 10;
-    public static final int ZERO_DATA   = 11;
+    public static final int UPDATE_PTR  = 2;
+    //public static final int UPDATE_DATA = 10;
+    //public static final int ZERO_DATA   = 11;
 
-    public static final int LOOP_MOVE_PTR  = 12;
-    public static final int LOOP_MOVE_DATA = 13;
+    //public static final int LOOP_MOVE_PTR  = 12;
+    //public static final int LOOP_MOVE_DATA = 13;
 
-    public static final int END         = 14;
+    public static final int UPDATE_DATA_AT_OFFSET = 3;
+    public static final int SET_DATA_AT_OFFSET    = 4;
+    public static final int READ_IN_AT_OFFSET     = 5;
+    public static final int WRITE_OUT_AT_OFFSET   = 6;
+    public static final int MULT_ADD_AT_OFFSET    = 7;
+    public static final int MULT_ASSIGN_AT_OFFSET = 8;
+
+    public static final int IF_END    = 9;
+
+    public static final int END       = 10;
     // @formatter:on
 
     /**
      * An array that maps from a bytecode value to a {@link String} for the corresponding
      * instruction mnemonic.
      */
-    @CompilationFinal(dimensions = 1) private static final String[] nameArray = new String[0xff];
+    @CompilationFinal(dimensions = 1) private static final String[] nameArray = new String[0x100];
 
     /**
      * An array that maps from a bytecode value to the set of {@link Flags} for the corresponding
      * instruction.
      */
-    @CompilationFinal(dimensions = 1) private static final int[] flagsArray = new int[0xff];
+    @CompilationFinal(dimensions = 1) private static final int[] flagsArray = new int[0x100];
 
     /**
      * An array that maps from a bytecode value to the length in bytes for the corresponding
      * instruction.
      */
-    @CompilationFinal(dimensions = 1) private static final int[] lengthArray = new int[0xff];
+    @CompilationFinal(dimensions = 1) private static final int[] lengthArray = new int[0x100];
 
     static class Flags {
         /**
@@ -67,22 +76,31 @@ public final class Bytecodes {
 
     // @formatter:off
     static {
-        def(NOP, "nop", "b", 0);
-        def(INC_PTR, ">", "b", 0);
-        def(DEC_PTR, "<", "b", 0);
-        def(INC_DATA, "+", "b", 0);
-        def(DEC_DATA, "-", "b", 0);
-        def(WRITE_OUT, ".", "b", 0);
-        def(READ_IN, ",", "b", 0);
+        //def(NOP, "nop", "b", 0);
+        //def(INC_PTR, ">", "b", 0);
+        //def(DEC_PTR, "<", "b", 0);
+        //def(INC_DATA, "+", "b", 0);
+        //def(DEC_DATA, "-", "b", 0);
+        //def(WRITE_OUT, ".", "b", 0);
+        //def(READ_IN, ",", "b", 0);
         def(LOOP_BEGIN, "[", "b", FALL_THROUGH);
         def(LOOP_END, "]", "b", STOP);
 
         // Extra bytecodes produced by the optimization pass (--bf.Optimize).
         def(UPDATE_PTR, "p", "bj", 0);
-        def(UPDATE_DATA, "d", "bj", 0);
-        def(ZERO_DATA, "0", "b", 0);
-        def(LOOP_MOVE_PTR, "P", "bj", 0);
-        def(LOOP_MOVE_DATA, "D", "bji", 0);
+        //def(UPDATE_DATA, "d", "bj", 0);
+        //def(ZERO_DATA, "0", "b", 0);
+        //def(LOOP_MOVE_PTR, "P", "bj", 0);
+        //def(LOOP_MOVE_DATA, "D", "bji", 0);
+
+        // Bytecodes with additional offset
+        def(UPDATE_DATA_AT_OFFSET, "p_", "bdo", 0);
+        def(SET_DATA_AT_OFFSET, "=_", "bvo", 0);
+        def(READ_IN_AT_OFFSET, ",_", "bo", 0);
+        def(WRITE_OUT_AT_OFFSET, "._", "bo", 0);
+        def(MULT_ADD_AT_OFFSET, "*+_", "bvso", 0);
+        def(MULT_ASSIGN_AT_OFFSET, "*=_", "bvso", 0);
+        def(IF_END, "}", "b", STOP);
 
         def(END, "end", "b", 0);
     }

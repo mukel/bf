@@ -1,4 +1,4 @@
-package com.oracle.truffle.brainfck.launcher;
+package com.oracle.truffle.bf.launcher;
 
 import org.graalvm.launcher.AbstractLanguageLauncher;
 import org.graalvm.options.OptionCategory;

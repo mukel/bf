@@ -1,37 +1,26 @@
 package com.oracle.truffle.bf;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.Arrays;
-
+import com.oracle.truffle.api.*;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.frame.FrameDescriptor;
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
+import com.oracle.truffle.api.nodes.RootNode;
+import com.oracle.truffle.api.source.Source;
 import org.graalvm.options.OptionCategory;
 import org.graalvm.options.OptionDescriptors;
 import org.graalvm.options.OptionKey;
 
-import com.oracle.truffle.api.CallTarget;
-import com.oracle.truffle.api.CompilerAsserts;
-import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.Option;
-import com.oracle.truffle.api.TruffleLanguage;
-import com.oracle.truffle.api.TruffleLogger;
-import com.oracle.truffle.api.exception.AbstractTruffleException;
-import com.oracle.truffle.api.frame.FrameDescriptor;
-import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.interop.ExceptionType;
-import com.oracle.truffle.api.interop.InteropLibrary;
-import com.oracle.truffle.api.library.ExportLibrary;
-import com.oracle.truffle.api.library.ExportMessage;
-import com.oracle.truffle.api.nodes.ExplodeLoop;
-import com.oracle.truffle.api.nodes.RootNode;
-import com.oracle.truffle.api.source.Source;
-import com.oracle.truffle.api.source.SourceSection;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Arrays;
 
 @TruffleLanguage.Registration(id = "bf", name = "Brainf*ck", version = "0.1", characterMimeTypes = "application/x-bf", contextPolicy = TruffleLanguage.ContextPolicy.SHARED)
 public final class BFLanguage extends TruffleLanguage<TruffleLanguage.Env> {
 
-    @Option(help = "Number of memory cells available (default: 30000).", usageSyntax = "[0..inf)", category = OptionCategory.USER) //
+    @Option(help = "Number of memory cells available (default: 30000).", usageSyntax = "[0..inf)", category = OptionCategory.USER)
+    //
     public static final OptionKey<Integer> NumberOfCells = new OptionKey<>(30000);
 
     @Override
@@ -39,7 +28,7 @@ public final class BFLanguage extends TruffleLanguage<TruffleLanguage.Env> {
         return new BFLanguageOptionDescriptors();
     }
 
-    private static final ContextReference<TruffleLanguage.Env> CONTEXT_REFERENCE = ContextReference.create(BFLanguage.class);
+    public static final ContextReference<TruffleLanguage.Env> CONTEXT_REFERENCE = ContextReference.create(BFLanguage.class);
 
     @Override
     protected Env createContext(TruffleLanguage.Env env) {
@@ -88,9 +77,15 @@ public final class BFLanguage extends TruffleLanguage<TruffleLanguage.Env> {
     @Override
     protected CallTarget parse(final ParsingRequest request) throws Exception {
         Object[] parseResult = parse(request.getSource());
+        if (true) {
+            return BytecodeInterpreter.parseBytecode(request.getSource(), this);
+        }
+
         RootNode rootNode = new RootNode(BFLanguage.this, EMPTY_FRAME_DESCRIPTOR) {
-            @CompilationFinal(dimensions = 1) private final char[] code = (char[]) parseResult[0];
-            @CompilationFinal(dimensions = 1) private final int[] sideTable = (int[]) parseResult[1];
+            @CompilationFinal(dimensions = 1)
+            private final char[] code = (char[]) parseResult[0];
+            @CompilationFinal(dimensions = 1)
+            private final int[] sideTable = (int[]) parseResult[1];
 
             @Override
             public Object execute(VirtualFrame frame) {
@@ -163,31 +158,3 @@ public final class BFLanguage extends TruffleLanguage<TruffleLanguage.Env> {
     }
 }
 
-@ExportLibrary(InteropLibrary.class)
-final class ParseError extends AbstractTruffleException {
-
-    private final Source source;
-    private final int offset;
-
-    public ParseError(Source source, int offset, String message) {
-        super(String.format("%s (at line %d, column %d): %s", source.getName(), source.getLineNumber(offset), source.getColumnNumber(offset), message));
-        this.source = source;
-        this.offset = offset;
-    }
-
-    @ExportMessage
-    ExceptionType getExceptionType() {
-        return ExceptionType.PARSE_ERROR;
-    }
-
-    @ExportMessage
-    boolean hasSourceLocation() {
-        return true;
-    }
-
-    @ExportMessage(name = "getSourceLocation")
-    @TruffleBoundary
-    SourceSection getSourceSection() {
-        return source.createSection(source.getLineNumber(offset), source.getColumnNumber(offset), 1);
-    }
-}
